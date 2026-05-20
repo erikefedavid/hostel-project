@@ -1,25 +1,23 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/layout/Providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  // other metadata fields remain
-};
   title: "HAMS - Lead City University Hostel Portal",
   description:
     "Automated rule-based Hostel Allocation Management System (HAMS) for Lead City University, Ibadan.",
+};
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -30,7 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-white text-slate-900 selection:bg-lcu-pink selection:text-slate-900 relative">
         {/* Animated ambient backdrop blobs for WOW premium aesthetic */}
@@ -48,9 +46,3 @@ export default function RootLayout({
     </html>
   );
 }
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
