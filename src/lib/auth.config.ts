@@ -21,6 +21,27 @@ export const authConfig: NextAuthConfig = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Strip any trailing dots from domains to prevent DNS/SSL issues
+      const cleanBaseUrl = baseUrl.endsWith(".") ? baseUrl.slice(0, -1) : baseUrl;
+      let cleanUrl = url.endsWith(".") ? url.slice(0, -1) : url;
+
+      if (cleanUrl.startsWith("/")) {
+        return `${cleanBaseUrl}${cleanUrl}`;
+      }
+
+      try {
+        const u = new URL(cleanUrl);
+        if (u.host.endsWith(".")) {
+          u.host = u.host.slice(0, -1);
+          cleanUrl = u.toString();
+        }
+      } catch (e) {
+        return cleanBaseUrl;
+      }
+
+      return cleanUrl;
+    },
   },
   pages: {
     signIn: "/login",

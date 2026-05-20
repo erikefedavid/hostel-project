@@ -6,6 +6,12 @@ const { auth } = NextAuth(authConfig);
 
 export default auth((req) => {
   const { nextUrl } = req;
+  
+  // Clean trailing dot from host if present to prevent DNS/SSL connection issues
+  if (nextUrl.host && nextUrl.host.endsWith(".")) {
+    nextUrl.host = nextUrl.host.slice(0, -1);
+  }
+
   const isLoggedIn = !!req.auth;
   const userRole = (req.auth?.user as any)?.role;
 
