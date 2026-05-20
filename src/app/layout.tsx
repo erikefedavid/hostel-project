@@ -14,10 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // other metadata fields remain
+};
   title: "HAMS - Lead City University Hostel Portal",
   description:
     "Automated rule-based Hostel Allocation Management System (HAMS) for Lead City University, Ibadan.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+
 };
 
 export default function RootLayout({
@@ -46,3 +48,9 @@ export default function RootLayout({
     </html>
   );
 }
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
