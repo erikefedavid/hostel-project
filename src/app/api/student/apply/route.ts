@@ -4,6 +4,7 @@ import dbConnect from "@/lib/db";
 import User from "@/models/User";
 import Application from "@/models/Application";
 import Semester from "@/models/Semester";
+import Room from "@/models/Room";
 
 export async function POST(req: Request) {
   try {
@@ -32,7 +33,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const { notes } = await req.json();
+    const { notes, roomId } = await req.json();
+
+    if (!roomId) {
+      return NextResponse.json(
+        { error: "Please select a room to complete your hostel allocation." },
+        { status: 400 }
+      );
+    }
+
+    // Verify the room exists and has beds available
+    const room = await Room.findById(roomId);
+    if (!room) {
+      return NextResponse.json({ error: "The selected room was not found." }, { status: 404 });
+    }
+
+    if (room.availableBeds <= 0) {
+      return NextResponse.json(
+        { error: `Room ${room.roomNumber} is fully occupied. Please select another room.` },
+        { status: 400 }
+      );
+    }
 
     // Check if the student has already applied for this semester
     const existingApp = await Application.findOne({
@@ -47,16 +68,22 @@ export async function POST(req: Request) {
       );
     }
 
+    // Perform atomic capacity updates and allocate the student!
+    room.availableBeds -= 1;
+    await room.save();
+
     const newApplication = await Application.create({
       studentId: student._id,
       semester: activeSemester.label,
+      roomId: room._id,
       notes: notes || "",
-      status: "PENDING",
+      status: "ALLOCATED",
       submittedAt: new Date(),
+      allocatedAt: new Date(),
     });
 
     return NextResponse.json({
-      message: "Application submitted successfully!",
+      message: "Room booked and allocated successfully!",
       application: newApplication,
     });
   } catch (error: any) {

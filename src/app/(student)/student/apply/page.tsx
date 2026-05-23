@@ -7,7 +7,6 @@ import { motion } from "framer-motion";
 import { Send, Calendar, AlertTriangle, CheckCircle2, ChevronLeft } from "lucide-react";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 
 export default function ApplyPage() {
   const { data: session } = useSession();
@@ -17,6 +16,11 @@ export default function ApplyPage() {
   const [alreadyApplied, setAlreadyApplied] = useState(false);
   const [notes, setNotes] = useState("");
   
+  // Dynamic Room Selections
+  const [hostels, setHostels] = useState<any[]>([]);
+  const [selectedHostelId, setSelectedHostelId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -31,6 +35,13 @@ export default function ApplyPage() {
         if (data.application) {
           setAlreadyApplied(true);
         }
+      }
+
+      // Fetch dynamic matching building and rooms
+      const roomsRes = await fetch("/api/student/rooms");
+      if (roomsRes.ok) {
+        const roomsData = await roomsRes.json();
+        setHostels(roomsData.hostels || []);
       }
     } catch (err) {
       console.error("Eligibility check error:", err);
@@ -50,6 +61,11 @@ export default function ApplyPage() {
       return;
     }
 
+    if (!selectedRoomId) {
+      setError("Please select a target room coordinates to complete reservation.");
+      return;
+    }
+
     setIsSubmitting(true);
     setError("");
     setSuccess("");
@@ -58,7 +74,7 @@ export default function ApplyPage() {
       const res = await fetch("/api/student/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notes }),
+        body: JSON.stringify({ notes, roomId: selectedRoomId }),
       });
 
       const data = await res.json();
@@ -66,7 +82,7 @@ export default function ApplyPage() {
       if (!res.ok) {
         setError(data.error || "Failed to submit application.");
       } else {
-        setSuccess("Application submitted successfully! Tracking status now...");
+        setSuccess("Room booked and allocated successfully! Directing to dashboard...");
         setTimeout(() => {
           router.push("/student/dashboard");
         }, 1500);
@@ -186,6 +202,119 @@ export default function ApplyPage() {
                 </div>
               </div>
 
+              {/* Building Selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-bold text-slate-700 ml-1">
+                  Select Hostel Building
+                </label>
+                <select
+                  value={selectedHostelId}
+                  onChange={(e) => {
+                    setSelectedHostelId(e.target.value);
+                    setSelectedRoomId("");
+                  }}
+                  required
+                  className="glass-input px-4 py-3 rounded-xl text-base bg-white/85 focus:outline-none"
+                >
+                  <option value="">Choose a building...</option>
+                  {hostels.map((h) => (
+                    <option key={h._id} value={h._id}>
+                      {h.name} ({h.gender === "male" ? "Male Designation" : "Female Designation"})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Room Selector (Down) */}
+              {selectedHostelId && (
+                <div className="flex flex-col gap-1.5 animate-fadeIn">
+                  <label className="text-sm font-bold text-slate-700 ml-1">
+                    Select Room
+                  </label>
+                  <select
+                    value={selectedRoomId}
+                    onChange={(e) => setSelectedRoomId(e.target.value)}
+                    required
+                    className="glass-input px-4 py-3 rounded-xl text-base bg-white/85 focus:outline-none"
+                  >
+                    <option value="">Choose a room coordinates...</option>
+                    {hostels
+                      .find((h) => h._id === selectedHostelId)
+                      ?.rooms.map((room: any) => {
+                        const isFull = room.isFull || room.availableBeds === 0;
+                        const label = `Room ${room.roomNumber} (Block ${room.block}, Floor ${room.floor === 0 ? "Ground" : room.floor}) - ${room.occupiedBeds}/${room.capacity} occupied ${isFull ? "[FULL]" : ""}`;
+                        return (
+                          <option
+                            key={room._id}
+                            value={room._id}
+                            disabled={isFull}
+                            className={isFull ? "text-red-500 font-bold" : "text-emerald-700 font-semibold"}
+                          >
+                            {label}
+                          </option>
+                        );
+                      })}
+                  </select>
+                </div>
+              )}
+
+              {/* Interactive Room Visualization Preview */}
+              {selectedRoomId && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="p-5 rounded-xl bg-slate-50 border border-slate-200 mt-1 flex flex-col gap-3.5"
+                >
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                    Room Beds Occupancy Layout
+                  </span>
+                  {(() => {
+                    const activeHostel = hostels.find((h) => h._id === selectedHostelId);
+                    const activeRoom = activeHostel?.rooms.find((r: any) => r._id === selectedRoomId);
+                    if (!activeRoom) return null;
+                    
+                    const beds = [];
+                    for (let i = 0; i < activeRoom.capacity; i++) {
+                      beds.push(i < activeRoom.occupiedBeds ? "occupied" : "available");
+                    }
+                    
+                    return (
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-extrabold text-slate-900">
+                            Room {activeRoom.roomNumber} (Block {activeRoom.block})
+                          </span>
+                          <span className="text-xs bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full font-bold text-slate-700 uppercase">
+                            {activeRoom.floor === 0 ? "Ground Floor" : `Floor ${activeRoom.floor}`}
+                          </span>
+                        </div>
+                        
+                        {/* Bed grid visual */}
+                        <div className="grid grid-cols-4 gap-3 mt-1">
+                          {beds.map((bed, idx) => (
+                            <div key={idx} className="flex flex-col items-center gap-1.5 p-2 rounded-xl bg-white border border-slate-200 shadow-sm relative group select-none">
+                              <div
+                                className={`w-4.5 h-4.5 rounded-full flex items-center justify-center shadow-inner ${
+                                  bed === "occupied" ? "bg-lcu-pink" : "bg-emerald-500"
+                                }`}
+                              />
+                              <span className="text-[9px] font-bold text-slate-500">Bed {idx + 1}</span>
+                              <span className="text-[8px] font-bold mt-0.5 text-slate-650">
+                                {bed === "occupied" ? "Occupied" : "Free"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <p className="text-xs text-slate-700 mt-1 font-semibold leading-relaxed border-t border-slate-200 pt-2.5">
+                          Capacity summary: <span className="text-emerald-700 font-bold">{activeRoom.availableBeds} beds available</span> out of {activeRoom.capacity} slots.
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </motion.div>
+              )}
+
               {/* Remarks/Notes */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-slate-700 ml-1">
@@ -202,17 +331,18 @@ export default function ApplyPage() {
               {/* Priority Notice Box */}
               <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 leading-relaxed">
                 <span className="font-bold text-slate-900 uppercase block mb-1">Priority Rule Reminder:</span>
-                Your application will be sorted based on level priority and application time (first-come-first-served). Ground floor priorities are reserved for special needs profiles.
+                Your reservation is dynamic and immediately locked in real-time. Ground floor selections are highly recommended for special needs student configurations.
               </div>
 
               <Button
                 variant="pink"
                 type="submit"
                 isLoading={isSubmitting}
+                disabled={!selectedRoomId}
                 className="py-3.5 flex items-center justify-center gap-2 mt-2"
               >
                 <Send className="w-4 h-4" />
-                <span>Submit Application Form</span>
+                <span>Confirm Room Booking</span>
               </Button>
             </form>
           </Card>

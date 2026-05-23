@@ -55,15 +55,17 @@ async function seed() {
     console.log("Semester created:", semester.label);
 
     // 3. Create Hostels and Rooms
-    const maleHostel = await Hostel.create({ name: "Moremi Hall", gender: "male", totalRooms: 60 });
-    const femaleHostel = await Hostel.create({ name: "Queen Amina Hall", gender: "female", totalRooms: 60 });
+    const exoduxHostel = await Hostel.create({ name: "Exodux", gender: "male", totalRooms: 20 });
+    const oliveHostel = await Hostel.create({ name: "Olive", gender: "female", totalRooms: 20 });
+    const enterpriseMaleHostel = await Hostel.create({ name: "Enterprise (Male)", gender: "male", totalRooms: 20 });
+    const enterpriseFemaleHostel = await Hostel.create({ name: "Enterprise (Female)", gender: "female", totalRooms: 20 });
 
     const createRooms = async (hostelId: mongoose.Types.ObjectId, prefix: string) => {
       const roomsToInsert = [];
       for (const block of ["A", "B"]) {
-        for (let floor = 0; floor < 3; floor++) {
-          for (let r = 1; r <= 10; r++) {
-            const roomNumber = `${prefix}${block}-${floor}0${r === 10 ? 10 : r}`;
+        for (let floor = 0; floor < 2; floor++) {
+          for (let r = 1; r <= 5; r++) {
+            const roomNumber = `${prefix}${block}-${floor}0${r}`;
             roomsToInsert.push({
               hostelId,
               block,
@@ -78,9 +80,11 @@ async function seed() {
       return Room.insertMany(roomsToInsert);
     };
 
-    const maleRooms = await createRooms(maleHostel._id as mongoose.Types.ObjectId, "M-");
-    const femaleRooms = await createRooms(femaleHostel._id as mongoose.Types.ObjectId, "F-");
-    console.log(`Created ${maleRooms.length + femaleRooms.length} rooms.`);
+    const exoduxRooms = await createRooms(exoduxHostel._id as mongoose.Types.ObjectId, "EX-");
+    const oliveRooms = await createRooms(oliveHostel._id as mongoose.Types.ObjectId, "OL-");
+    const enterpriseMaleRooms = await createRooms(enterpriseMaleHostel._id as mongoose.Types.ObjectId, "ENM-");
+    const enterpriseFemaleRooms = await createRooms(enterpriseFemaleHostel._id as mongoose.Types.ObjectId, "ENF-");
+    console.log(`Created ${exoduxRooms.length + oliveRooms.length + enterpriseMaleRooms.length + enterpriseFemaleRooms.length} rooms.`);
 
     // 4. Create Admin and Student Users
     const hashedPassword = await bcrypt.hash("password123", 10);
@@ -137,7 +141,7 @@ async function seed() {
     // 10 allocated (5 male, 5 female)
     for (let i = 0; i < 5; i++) {
       // Allocate Male
-      const mRoom = maleRooms[i];
+      const mRoom = exoduxRooms[i];
       appsToInsert.push({
         studentId: maleStudents[i]._id,
         semester: semester.label,
@@ -149,7 +153,7 @@ async function seed() {
       await Room.findByIdAndUpdate(mRoom._id, { $inc: { availableBeds: -1 } });
 
       // Allocate Female
-      const fRoom = femaleRooms[i];
+      const fRoom = oliveRooms[i];
       appsToInsert.push({
         studentId: femaleStudents[i]._id,
         semester: semester.label,
