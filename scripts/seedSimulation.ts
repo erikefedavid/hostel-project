@@ -55,15 +55,34 @@ async function seed() {
     console.log("Semester created:", semester.label);
 
     // 3. Create Hostels and Rooms
-    const exoduxHostel = await Hostel.create({ name: "Exodux", gender: "male", totalRooms: 20 });
-    const oliveHostel = await Hostel.create({ name: "Olive", gender: "female", totalRooms: 20 });
-    const enterpriseMaleHostel = await Hostel.create({ name: "Enterprise (Male)", gender: "male", totalRooms: 20 });
-    const enterpriseFemaleHostel = await Hostel.create({ name: "Enterprise (Female)", gender: "female", totalRooms: 20 });
+    const hostelsToCreate = [
+      { name: "Lemon", gender: "male" },
+      { name: "Apple Hall", gender: "female" },
+      { name: "Genesis", gender: "male" },
+      { name: "Block U", gender: "male" },
+      { name: "Block I", gender: "male" },
+      { name: "Block L", gender: "female" },
+      { name: "Block C", gender: "female" },
+      { name: "Hibiscus", gender: "male" },
+      { name: "Camp David 1", gender: "female" },
+      { name: "Camp David 2", gender: "female" },
+      { name: "Champions", gender: "male" },
+      { name: "Exodus", gender: "male" },
+      { name: "Olive", gender: "female" },
+      { name: "Cedar (Male)", gender: "male" },
+      { name: "Cedar (Female)", gender: "female" },
+    ];
+
+    const createdHostels: any[] = [];
+    for (const h of hostelsToCreate) {
+      const hostel = await Hostel.create({ name: h.name, gender: h.gender as "male" | "female", totalRooms: 10 });
+      createdHostels.push(hostel);
+    }
 
     const createRooms = async (hostelId: mongoose.Types.ObjectId, prefix: string) => {
       const roomsToInsert = [];
       for (const block of ["A", "B"]) {
-        for (let floor = 0; floor < 2; floor++) {
+        for (let floor = 0; floor < 1; floor++) { // 1 floor, 5 rooms per block = 10 rooms per hostel
           for (let r = 1; r <= 5; r++) {
             const roomNumber = `${prefix}${block}-${floor}0${r}`;
             roomsToInsert.push({
@@ -80,11 +99,23 @@ async function seed() {
       return Room.insertMany(roomsToInsert);
     };
 
-    const exoduxRooms = await createRooms(exoduxHostel._id as mongoose.Types.ObjectId, "EX-");
-    const oliveRooms = await createRooms(oliveHostel._id as mongoose.Types.ObjectId, "OL-");
-    const enterpriseMaleRooms = await createRooms(enterpriseMaleHostel._id as mongoose.Types.ObjectId, "ENM-");
-    const enterpriseFemaleRooms = await createRooms(enterpriseFemaleHostel._id as mongoose.Types.ObjectId, "ENF-");
-    console.log(`Created ${exoduxRooms.length + oliveRooms.length + enterpriseMaleRooms.length + enterpriseFemaleRooms.length} rooms.`);
+    let totalRoomsCount = 0;
+    const maleRooms: any[] = [];
+    const femaleRooms: any[] = [];
+
+    for (const hostel of createdHostels) {
+      // Create prefix from first 3 letters of hostel name, stripping whitespace
+      const cleanName = hostel.name.replace(/[^a-zA-Z]/g, "");
+      const prefix = cleanName.substring(0, 3).toUpperCase() + "-";
+      const rooms = await createRooms(hostel._id as mongoose.Types.ObjectId, prefix);
+      totalRoomsCount += rooms.length;
+      if (hostel.gender === "male") {
+        maleRooms.push(...rooms);
+      } else {
+        femaleRooms.push(...rooms);
+      }
+    }
+    console.log(`Created ${createdHostels.length} hostels with a total of ${totalRoomsCount} rooms.`);
 
     // 4. Create Admin and Student Users
     const hashedPassword = await bcrypt.hash("password123", 10);
@@ -141,7 +172,7 @@ async function seed() {
     // 10 allocated (5 male, 5 female)
     for (let i = 0; i < 5; i++) {
       // Allocate Male
-      const mRoom = exoduxRooms[i];
+      const mRoom = maleRooms[i];
       appsToInsert.push({
         studentId: maleStudents[i]._id,
         semester: semester.label,
@@ -153,7 +184,7 @@ async function seed() {
       await Room.findByIdAndUpdate(mRoom._id, { $inc: { availableBeds: -1 } });
 
       // Allocate Female
-      const fRoom = oliveRooms[i];
+      const fRoom = femaleRooms[i];
       appsToInsert.push({
         studentId: femaleStudents[i]._id,
         semester: semester.label,
