@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:clean": "tsx scripts/seedClean.ts",
+    "seed:admin": "tsx scripts/seedAdmin.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

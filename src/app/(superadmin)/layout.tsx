@@ -100,7 +100,7 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
 
           <button
             onClick={handleSignOut}
-            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-red-500/20 text-red-600 hover:text-slate-900 hover:bg-red-600/10 hover:border-red-500/40 text-xs font-extrabold uppercase transition-all cursor-pointer"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-red-50 hover:bg-red-600 border border-red-200 hover:border-red-600 text-red-600 hover:text-white text-xs font-extrabold uppercase transition-all shadow-sm cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
